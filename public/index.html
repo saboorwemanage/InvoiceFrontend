@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Automator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0f172a;
+      --blue:   #3b82f6;
+      --blue2:  #1d4ed8;
+      --green:  #10b981;
+      --red:    #ef4444;
+      --bg:     #f1f5f9;
+      --card:   #ffffff;
+      --border: #e2e8f0;
+      --text:   #1e293b;
+      --muted:  #64748b;
+      --light:  #f8fafc;
+      --radius: 10px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--navy);
+      padding: 40px 28px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+
+    .sidebar-logo .icon {
+      width: 36px; height: 36px;
+      background: var(--blue);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .sidebar-logo h1 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .sidebar-logo span {
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .nav-section { margin-bottom: 32px; }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #475569;
+      margin-bottom: 10px;
+      padding-left: 4px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+      cursor: pointer;
+      margin-bottom: 2px;
+      transition: all 0.15s;
+    }
+
+    .nav-item.active { background: rgba(59,130,246,0.15); color: #93c5fd; }
+    .nav-item:hover:not(.active) { background: rgba(255,255,255,0.05); color: #cbd5e1; }
+
+    .nav-item .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .sidebar-tip {
+      margin-top: auto;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 12px;
+      color: #93c5fd;
+      line-height: 1.5;
+    }
+
+    .sidebar-tip strong { display: block; margin-bottom: 4px; color: #bfdbfe; }
+
+    .sidebar-tip a {
+      color: #60a5fa;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* ── Main ────────────────────────────────────────────────────────────── */
+    .main { padding: 40px 48px; overflow-y: auto; }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .page-header p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form Grid ───────────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--light);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+      background: #fff;
+    }
+
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    /* ── Line Items ──────────────────────────────────────────────────────── */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .items-table th {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 0 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .items-table th:last-child { text-align: right; }
+
+    .line-item-row td { padding: 6px 8px; vertical-align: middle; }
+
+    .line-item-row input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 13.5px;
+      background: transparent;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+
+    .line-item-row input:focus {
+      border-color: var(--blue);
+      background: #fff;
+    }
+
+    .line-item-row:hover input { background: var(--light); }
+
+    .col-desc  { width: 52%; }
+    .col-qty   { width: 14%; }
+    .col-rate  { width: 18%; }
+    .col-amt   { width: 12%; text-align: right; }
+    .col-del   { width: 4%; text-align: center; }
+
+    .amount-cell {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+      padding-right: 10px;
+      white-space: nowrap;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #cbd5e1;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 5px;
+      transition: color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+
+    .btn-remove:hover { color: var(--red); background: #fef2f2; }
+
+    .btn-add-item {
+      margin-top: 12px;
+      background: none;
+      border: 1.5px dashed var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .btn-add-item:hover { border-color: var(--blue); color: var(--blue); background: rgba(59,130,246,0.04); }
+
+    /* ── Totals ──────────────────────────────────────────────────────────── */
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .totals-inner {
+      min-width: 240px;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 5px;
+    }
+
+    .total-row.grand {
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      border-bottom: none;
+      margin-top: 6px;
+    }
+
+    .total-row .val { font-weight: 600; color: var(--text); }
+    .total-row.grand .val { color: #fff; font-size: 18px; }
+
+    /* ── Submit ──────────────────────────────────────────────────────────── */
+    .submit-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      padding-top: 8px;
+    }
+
+    .btn-submit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 28px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+
+    .btn-submit:hover:not(:disabled) { background: var(--blue2); box-shadow: 0 4px 14px rgba(59,130,246,0.35); }
+    .btn-submit:active:not(:disabled) { transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      max-width: 380px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s;
+      z-index: 1000;
+      line-height: 1.5;
+    }
+
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { background: #059669; }
+    #toast.error   { background: #dc2626; }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; padding: 24px; }
+      .main { padding: 24px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="icon">📄</div>
+      <div>
+        <h1>Invoice<br>Automator</h1>
+        <span>Powered by Trigger.dev</span>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Workflow</div>
+      <div class="nav-item active"><span class="dot"></span> Fill Form</div>
+      <div class="nav-item"><span class="dot"></span> Generate PDF</div>
+      <div class="nav-item"><span class="dot"></span> Send via Gmail</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Setup</div>
+      <div class="nav-item" onclick="window.open('/auth/gmail')"><span class="dot"></span> Connect Gmail</div>
+    </div>
+
+    <div class="sidebar-tip">
+      <strong>First time?</strong>
+      Connect your Gmail account before sending invoices.<br>
+      <a href="/auth/gmail">Connect Gmail →</a>
+    </div>
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="page-header">
+      <h2>Create Invoice</h2>
+      <p>Fill in the details below — the PDF is generated and emailed automatically.</p>
+    </div>
+
+    <form id="invoiceForm" onsubmit="handleSubmit(event)">
+
+      <!-- Your Info -->
+      <div class="card">
+        <div class="card-title">Your Information</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Your Name / Company *</label>
+            <input type="text" name="fromName" placeholder="Abdul Saboor" required />
+          </div>
+          <div class="field">
+            <label>Your Email *</label>
+            <input type="email" name="fromEmail" placeholder="you@example.com" required />
+          </div>
+          <div class="field">
+            <label>Phone (optional)</label>
+            <input type="text" name="fromPhone" placeholder="+1 555-000-0000" />
+          </div>
+          <div class="field">
+            <label>Address (optional)</label>
+            <input type="text" name="fromAddress" placeholder="123 Main St, City" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Client Info -->
+      <div class="card">
+        <div class="card-title">Client Information</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Client Name *</label>
+            <input type="text" name="clientName" placeholder="Jane Smith" required />
+          </div>
+          <div class="field">
+            <label>Client Email *</label>
+            <input type="email" name="clientEmail" placeholder="client@company.com" required />
+          </div>
+          <div class="field">
+            <label>Company (optional)</label>
+            <input type="text" name="clientCompany" placeholder="Acme Corp" />
+          </div>
+          <div class="field">
+            <label>Address (optional)</label>
+            <input type="text" name="clientAddress" placeholder="456 Business Ave" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice Details -->
+      <div class="card">
+        <div class="card-title">Invoice Details</div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Invoice # *</label>
+            <input type="text" name="invoiceNumber" id="invoiceNumber" required />
+          </div>
+          <div class="field">
+            <label>Invoice Date *</label>
+            <input type="date" name="invoiceDate" id="invoiceDate" required />
+          </div>
+          <div class="field">
+            <label>Due Date *</label>
+            <input type="date" name="dueDate" id="dueDate" required />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="field">
+            <label>Currency</label>
+            <select name="currency">
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — British Pound</option>
+              <option value="CAD">CAD — Canadian Dollar</option>
+              <option value="AUD">AUD — Australian Dollar</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tax Rate (%)</label>
+            <input type="number" name="taxRate" id="taxRate" value="0" min="0" max="100" step="0.1"
+                   oninput="recalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="card">
+        <div class="card-title">Services / Line Items</div>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th class="col-desc">Description</th>
+              <th class="col-qty">Qty</th>
+              <th class="col-rate">Rate</th>
+              <th class="col-amt">Amount</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="lineItems"></tbody>
+        </table>
+        <button type="button" class="btn-add-item" onclick="addLineItem()">+ Add Line Item</button>
+
+        <div class="totals">
+          <div class="totals-inner">
+            <div class="total-row">
+              <span>Subtotal</span>
+              <span class="val" id="subtotalDisplay">$0.00</span>
+            </div>
+            <div class="total-row" id="taxRow" style="display:none">
+              <span id="taxLabel">Tax (0%)</span>
+              <span class="val" id="taxDisplay">$0.00</span>
+            </div>
+            <div class="total-row grand">
+              <span>Total Due</span>
+              <span class="val" id="totalDisplay">$0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="card">
+        <div class="card-title">Notes & Payment Terms (optional)</div>
+        <div class="field">
+          <textarea name="notes" placeholder="e.g. Payment due within 30 days. Bank transfer to account ending in 4242."></textarea>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="card" style="padding:20px 24px">
+        <div class="submit-row">
+          <span id="statusText" style="font-size:13px;color:var(--muted)"></span>
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <div class="spinner" id="spinner"></div>
+            <span id="submitLabel">Generate PDF &amp; Send Invoice</span>
+          </button>
+        </div>
+      </div>
+
+    </form>
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  // ── Defaults ──────────────────────────────────────────────────────────────
+  (function init() {
+    const today = new Date();
+    const due   = new Date(today); due.setDate(due.getDate() + 30);
+    const fmt   = d => d.toISOString().split("T")[0];
+    const pad   = n => String(n).padStart(4, "0");
+
+    document.getElementById("invoiceDate").value = fmt(today);
+    document.getElementById("dueDate").value     = fmt(due);
+    document.getElementById("invoiceNumber").value =
+      "INV-" + pad(Math.floor(Math.random() * 9000) + 1000);
+
+    addLineItem();
+  })();
+
+  // ── Line Items ────────────────────────────────────────────────────────────
+  function addLineItem(desc = "", qty = 1, rate = 0) {
+    const tbody = document.getElementById("lineItems");
+    const idx   = tbody.children.length;
+    const tr    = document.createElement("tr");
+    tr.className = "line-item-row";
+    tr.dataset.idx = idx;
+
+    tr.innerHTML = `
+      <td class="col-desc">
+        <input type="text" placeholder="Service description" value="${desc}"
+               oninput="recalc()" required />
+      </td>
+      <td class="col-qty">
+        <input type="number" min="0.01" step="any" value="${qty}"
+               style="text-align:center" oninput="recalc()" required />
+      </td>
+      <td class="col-rate">
+        <input type="number" min="0" step="any" value="${rate || ''}"
+               placeholder="0.00" oninput="recalc()" required />
+      </td>
+      <td class="col-amt">
+        <div class="amount-cell" data-amt>$0.00</div>
+      </td>
+      <td class="col-del">
+        <button type="button" class="btn-remove" title="Remove" onclick="removeLineItem(this)">×</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    recalc();
+    tr.querySelector("input").focus();
+  }
+
+  function removeLineItem(btn) {
+    const row = btn.closest("tr");
+    if (document.getElementById("lineItems").children.length <= 1) return;
+    row.remove();
+    recalc();
+  }
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  function recalc() {
+    const currency = document.querySelector("[name=currency]").value;
+    const taxRate  = parseFloat(document.getElementById("taxRate").value) || 0;
+    const sym      = { USD:"$", EUR:"€", GBP:"£", CAD:"CA$", AUD:"A$" }[currency] || currency + " ";
+    const f        = n => sym + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    let subtotal = 0;
+    document.querySelectorAll(".line-item-row").forEach(row => {
+      const qty  = parseFloat(row.cells[1].querySelector("input").value) || 0;
+      const rate = parseFloat(row.cells[2].querySelector("input").value) || 0;
+      const amt  = qty * rate;
+      subtotal  += amt;
+      row.querySelector("[data-amt]").textContent = f(amt);
+    });
+
+    const tax   = subtotal * taxRate / 100;
+    const total = subtotal + tax;
+
+    document.getElementById("subtotalDisplay").textContent = f(subtotal);
+    document.getElementById("totalDisplay").textContent    = f(total);
+
+    const taxRow = document.getElementById("taxRow");
+    if (taxRate > 0) {
+      taxRow.style.display = "";
+      document.getElementById("taxLabel").textContent   = `Tax (${taxRate}%)`;
+      document.getElementById("taxDisplay").textContent = f(tax);
+    } else {
+      taxRow.style.display = "none";
+    }
+  }
+
+  // ── Form Submit ───────────────────────────────────────────────────────────
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const btn     = document.getElementById("submitBtn");
+    const spinner = document.getElementById("spinner");
+    const label   = document.getElementById("submitLabel");
+    const status  = document.getElementById("statusText");
+
+    btn.disabled = true;
+    spinner.style.display = "block";
+    label.textContent = "Sending…";
+    status.textContent = "";
+
+    try {
+      const fd = new FormData(e.target);
+
+      // Build line items from table
+      const lineItems = [];
+      document.querySelectorAll(".line-item-row").forEach(row => {
+        lineItems.push({
+          description: row.cells[0].querySelector("input").value.trim(),
+          quantity:    parseFloat(row.cells[1].querySelector("input").value) || 0,
+          rate:        parseFloat(row.cells[2].querySelector("input").value) || 0,
+        });
+      });
+
+      const invoice = {
+        invoiceNumber: fd.get("invoiceNumber"),
+        invoiceDate:   fd.get("invoiceDate"),
+        dueDate:       fd.get("dueDate"),
+        fromName:      fd.get("fromName"),
+        fromEmail:     fd.get("fromEmail"),
+        fromPhone:     fd.get("fromPhone") || undefined,
+        fromAddress:   fd.get("fromAddress") || undefined,
+        clientName:    fd.get("clientName"),
+        clientEmail:   fd.get("clientEmail"),
+        clientCompany: fd.get("clientCompany") || undefined,
+        clientAddress: fd.get("clientAddress") || undefined,
+        lineItems,
+        taxRate:       parseFloat(fd.get("taxRate")) || 0,
+        notes:         fd.get("notes") || undefined,
+        currency:      fd.get("currency"),
+      };
+
+      const res  = await fetch("/api/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoice }),
+      });
+
+      label.textContent = "Sending…";
+      status.textContent = "Generating PDF & sending email…";
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Unknown error");
+      }
+
+      showToast(`✓ Invoice #${invoice.invoiceNumber} sent to ${invoice.clientEmail}`, "success");
+      status.textContent = "";
+
+      // Increment invoice number for next use
+      const cur = document.getElementById("invoiceNumber").value;
+      const n   = parseInt(cur.replace(/\D/g, ""), 10);
+      if (!isNaN(n)) document.getElementById("invoiceNumber").value = "INV-" + String(n + 1).padStart(4, "0");
+
+    } catch (err) {
+      showToast("Error: " + err.message, "error");
+      status.textContent = "";
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = "none";
+      label.textContent = "Generate PDF & Send Invoice";
+    }
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = "success") {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className   = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = type; }, 5000);
+  }
+</script>
+</body>
+</html>
