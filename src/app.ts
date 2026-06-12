@@ -2,17 +2,15 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { generateInvoicePDF } from "./lib/pdf-generator.js";
 import { InvoiceSchema, buildEmailBody } from "./invoice-helpers.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(process.cwd(), "public")));
 
 // ── POST /api/send-invoice ────────────────────────────────────────────────────
 app.post("/api/send-invoice", async (req, res) => {
@@ -69,7 +67,11 @@ app.post("/api/send-invoice", async (req, res) => {
   }
 });
 
-const PORT = Number(process.env.PORT ?? 3000);
-app.listen(PORT, () => {
-  console.log(`\n  Invoice Automator running at http://localhost:${PORT}\n`);
-});
+export default app;
+
+if (!process.env.VERCEL) {
+  const PORT = Number(process.env.PORT ?? 3000);
+  app.listen(PORT, () => {
+    console.log(`\n  Invoice Automator running at http://localhost:${PORT}\n`);
+  });
+}
